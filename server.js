@@ -1,15 +1,26 @@
 const express = require('express');
 const path = require('path');
+const fs = require('fs');
 const app = express();
 
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+
+// Find the public folder wherever it is
+const possiblePaths = [
+  path.join(__dirname, 'public'),
+  path.join(__dirname, 'literary-frequencies 2'),
+  path.join(__dirname, 'literary-frequencies'),
+];
+const staticPath = possiblePaths.find(p => fs.existsSync(p)) || path.join(__dirname, 'public');
+console.log('Serving static files from:', staticPath);
+app.use(express.static(staticPath));
 
 app.post('/api/playlist', async (req, res) => {
-  const { apiKey, work, theme } = req.body;
+  const { apiKey: bodyKey, work, theme } = req.body;
+  const apiKey = process.env.ANTHROPIC_API_KEY || bodyKey;
 
   if (!apiKey || !work || !theme) {
-    return res.status(400).json({ error: 'Missing apiKey, work, or theme.' });
+    return res.status(400).json({ error: 'Missing API key, work, or theme.' });
   }
 
   const prompt = `You are a music curator and literary scholar. Generate a playlist of 6 real, well-known songs capturing the theme of "${theme}" in ${work}.
@@ -58,8 +69,7 @@ Rules:
   }
 });
 
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`\n🎵 Literary Frequencies is running.`);
-  console.log(`   Open http://localhost:${PORT} in your browser.\n`);
+  console.log(`\n🎵 Literary Frequencies is running on port ${PORT}`);
 });
